@@ -5,7 +5,17 @@ on:
     # 07:00 WIB (00:00 UTC) dan 17:00 WIB (10:00 UTC)
     - cron: "0 0 * * *"
     - cron: "0 10 * * *"
-  workflow_dispatch: # tombol manual di GitHub
+  workflow_dispatch:
+    inputs:
+      scraper:
+        description: 'Pilih scraper'
+        required: true
+        default: 'psalmnote'
+        type: choice
+        options:
+          - psalmnote
+          - jrchord
+          - both
 
 jobs:
   scrape:
@@ -21,12 +31,14 @@ jobs:
         run: pip install -r scraper/requirements.txt
 
       - name: Scrape JRChord
+        if: ${{ github.event.inputs.scraper == 'jrchord' || github.event.inputs.scraper == 'both' || github.event_name == 'schedule' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -u scraper/scrape.py
 
       - name: Scrape Psalmnote
+        if: ${{ github.event.inputs.scraper == 'psalmnote' || github.event.inputs.scraper == 'both' || github.event_name == 'schedule' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
