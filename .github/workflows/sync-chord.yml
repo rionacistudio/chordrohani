@@ -1,0 +1,26 @@
+name: Auto-sync Chord dari JRChord
+
+on:
+  schedule:
+    # Jalankan setiap hari jam 03:00 UTC (10:00 WIB)
+    - cron: "0 3 * * *"
+  workflow_dispatch: # tombol manual di GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Scrape & upsert
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper/scrape.py
