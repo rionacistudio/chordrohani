@@ -1,4 +1,5 @@
-"""Scrape chord dari psalmnote.com API → upsert ke Supabase (REST)."""
+"""Scrape chord dari psalmnote.com API → upsert ke Supabase (REST).
+Strategi: artists → albums → songinfos → song detail."""
 
 import os
 import time
@@ -43,12 +44,10 @@ def supabase_upsert(rows: list):
 # ── Konversi JSON psalmnote → teks chord ────────────────────────────────
 
 def song_to_text(song_data: dict) -> str:
-    """Konversi song array psalmnote ke format teks chord-over-lyric."""
     parts = song_data.get("song", [])
     if not parts:
         return ""
 
-    # Index by part name for "equals" lookup
     part_map = {}
     for p in parts:
         if "part" in p and "content" in p:
@@ -56,7 +55,6 @@ def song_to_text(song_data: dict) -> str:
 
     lines = []
     for section in parts:
-        # Handle "equals" (repeat section)
         if "equals" in section:
             ref = section["equals"]
             content = part_map.get(ref, [])
@@ -68,7 +66,6 @@ def song_to_text(song_data: dict) -> str:
         if not part_name:
             continue
 
-        # Section header
         lines.append(f"{part_name}:")
 
         for row in content:
@@ -77,7 +74,7 @@ def song_to_text(song_data: dict) -> str:
             elif row.get("row") == "lyric":
                 lines.append(row.get("lyric", "").rstrip())
 
-        lines.append("")  # blank line between sections
+        lines.append("")
 
     return "\n".join(lines).strip()
 
@@ -85,35 +82,45 @@ def song_to_text(song_data: dict) -> str:
 # ── Main ────────────────────────────────────────────────────────────────
 
 def main():
-    print("Ambil daftar lagu dari psalmnote...", flush=True)
+    # Step 1: Ambil semua artis + album
+    print("Step 1: Ambil daftar artis...", flush=True)
+    r = requests.get(f"{API_BASE}/artists", headers=HEADERS, timeout=30)
+    r.raise_for_status()
+    artists = r.json()
+    print(f"   {len(artists)} artis ditemukan", flush=True)
 
-    # Coba ambil semua lagu (tanpa filter bahasa)
-    all_songs = []
-    page = 1
-    while True:
-        r = requests.get(
-            f"{API_BASE}/songs?page={page}&limit=100",
-            headers=HEADERS,
-            timeout=30,
-        )
-        r.raise_for_status()
-        batch = r.json()
-        if not batch:
-            break
-        all_songs.extend(batch)
-        print(f"   Halaman {page}: {len(batch)} lagu (total: {len(all_songs)})", flush=True)
-        if len(batch) < 100:
-            break
-        page += 1
-        time.sleep(0.3)
+    # Kumpulkan semua album alias
+    all_albums = []
+    for artist in artists:
+        for album in artist.get("albums", []):
+            all_albums.append(album.get("alias", ""))
+    all_albums = [a for a in all_albums if a]
+    print(f"   {len(all_albums)} album ditemukan", flush=True)
 
-    print(f"   Total {len(all_songs)} lagu ditemukan", flush=True)
+    # Step 2: Ambil songinfos per album
+    print("Step 2: Ambil daftar lagu per album...", flush=True)
+    all_aliases = set()
+    for i, album_alias in enumerate(all_albums, 1):
+        if i % 100 == 0:
+            print(f"   ... {i}/{len(all_albums)} album | {len(all_aliases)} lagu", flush=True)
+        try:
+            r = requests.get(f"{API_BASE}/album/{album_alias}", headers=HEADERS, timeout=15)
+            if r.status_code == 200:
+                album_data = r.json()
+                for info in album_data.get("songinfos", []):
+                    song_obj = info.get("songObj")
+                    if song_obj and song_obj.get("alias"):
+                        all_aliases.add(song_obj["alias"])
+        except Exception as e:
+            pass
+        time.sleep(0.2)
 
-    # Filter verified saja
-    to_scrape = [s for s in all_songs if s.get("isVerified") == 1]
-    print(f"   {len(to_scrape)} verified", flush=True)
+    print(f"   Total {len(all_aliases)} lagu unik ditemukan", flush=True)
 
-    print("Ambil data existing dari Supabase...", flush=True)
+    # Step 3: Scrape detail per lagu
+    print(f"Step 3: Scrape detail {len(all_aliases)} lagu...", flush=True)
+
+    # Ambil data existing untuk lastmod check
     existing = supabase_get({
         "select": "judul,penyanyi,lastmod",
         "limit": "10000",
@@ -121,21 +128,13 @@ def main():
     db_keys = {(s["judul"], s["penyanyi"]) for s in existing}
     print(f"   {len(db_keys)} lagu sudah ada di DB", flush=True)
 
-    # Scrape semua (update juga yang sudah ada)
-    print(f"Scraping {len(to_scrape)} lagu dari psalmnote...", flush=True)
-
     upsert_batch = []
     success = 0
     fail = 0
 
-    for i, song in enumerate(to_scrape, 1):
+    for i, alias in enumerate(all_aliases, 1):
         if i % 50 == 0:
-            print(f"   ... {i}/{len(to_scrape)}", flush=True)
-
-        alias = song.get("alias", "")
-        if not alias:
-            fail += 1
-            continue
+            print(f"   ... {i}/{len(all_aliases)} | {success} ok, {fail} fail", flush=True)
 
         try:
             r = requests.get(f"{API_BASE}/song/{alias}", headers=HEADERS, timeout=15)
@@ -144,8 +143,11 @@ def main():
                 continue
 
             detail = r.json()
-            chord_text = song_to_text(detail)
+            if not detail:
+                fail += 1
+                continue
 
+            chord_text = song_to_text(detail)
             if not chord_text:
                 fail += 1
                 continue
@@ -154,7 +156,10 @@ def main():
             penyanyi = detail.get("artist", "").strip()
             base_key = detail.get("chordBase", "").strip()
 
-            # Info tambahan dari songinfoObj
+            if not judul:
+                fail += 1
+                continue
+
             info = detail.get("songinfoObj") or {}
             album_obj = info.get("albumObj") or {}
             album = album_obj.get("name", "")
@@ -164,10 +169,6 @@ def main():
             songwriter = info.get("songwriter", "") or ""
             year = str(album_obj.get("publishedYear", "") or "")
             songtype = (detail.get("songtypeObj") or {}).get("songtype", "") or ""
-
-            if not judul:
-                fail += 1
-                continue
 
             upsert_batch.append({
                 "judul": judul,
@@ -184,7 +185,6 @@ def main():
             success += 1
 
         except Exception as e:
-            print(f"  Error {alias}: {e}", flush=True)
             fail += 1
 
         time.sleep(0.3)
