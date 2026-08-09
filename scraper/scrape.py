@@ -31,14 +31,16 @@ def supabase_get(params: dict) -> list:
 
 def supabase_upsert(rows: list):
     url = f"{SUPABASE_URL}/rest/v1/{TABLE}?on_conflict=judul,penyanyi"
+    print(f"  DEBUG URL: {SUPABASE_URL}/rest/v1/{TABLE}", flush=True)
+    print(f"  DEBUG rows sample: {rows[0] if rows else 'empty'}", flush=True)
     r = requests.post(url, headers={
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates",
     }, json=rows, timeout=60)
-    if not r.ok:
-        print(f"  ✗ Upsert gagal: {r.status_code} {r.text[:500]}", flush=True)
+    print(f"  DEBUG status: {r.status_code}", flush=True)
+    print(f"  DEBUG response: {r.text[:500]}", flush=True)
     r.raise_for_status()
     print(f"  ↑ Upserted {len(rows)} baris", flush=True)
 
