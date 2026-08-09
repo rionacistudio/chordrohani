@@ -10,8 +10,8 @@ import requests
 from bs4 import BeautifulSoup
 
 # ── Config ──────────────────────────────────────────────────────────────
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+SUPABASE_URL = os.environ["https://gyyzutfqhkvkdtdlgtzo.supabase.co"]
+SUPABASE_KEY = os.environ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5eXp1dGZxaGt2a2R0ZGxndHpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2NzU5MzQsImV4cCI6MjEwMTI1MTkzNH0.Xzzm-mgyzyjY5dp-BsKtQ5mPBQEoNVIxKkZmYckwPBg"]
 TABLE = "tb_chord"
 
 SITEMAP_INDEX = "https://www.jrchord.com/sitemap.xml"
