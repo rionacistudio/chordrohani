@@ -86,14 +86,32 @@ def song_to_text(song_data: dict) -> str:
 
 def main():
     print("Ambil daftar lagu dari psalmnote...", flush=True)
-    r = requests.get(f"{API_BASE}/songs?languageCode=ind", headers=HEADERS, timeout=30)
-    r.raise_for_status()
-    all_songs = r.json()
-    print(f"   {len(all_songs)} lagu Indonesia ditemukan", flush=True)
 
-    # Filter hanya yang verified
-    indo_songs = [s for s in all_songs if s.get("isVerified") == 1]
-    print(f"   {len(indo_songs)} verified", flush=True)
+    # Coba ambil semua lagu (tanpa filter bahasa)
+    all_songs = []
+    page = 1
+    while True:
+        r = requests.get(
+            f"{API_BASE}/songs?page={page}&limit=100",
+            headers=HEADERS,
+            timeout=30,
+        )
+        r.raise_for_status()
+        batch = r.json()
+        if not batch:
+            break
+        all_songs.extend(batch)
+        print(f"   Halaman {page}: {len(batch)} lagu (total: {len(all_songs)})", flush=True)
+        if len(batch) < 100:
+            break
+        page += 1
+        time.sleep(0.3)
+
+    print(f"   Total {len(all_songs)} lagu ditemukan", flush=True)
+
+    # Filter verified saja
+    to_scrape = [s for s in all_songs if s.get("isVerified") == 1]
+    print(f"   {len(to_scrape)} verified", flush=True)
 
     print("Ambil data existing dari Supabase...", flush=True)
     existing = supabase_get({
@@ -104,7 +122,6 @@ def main():
     print(f"   {len(db_keys)} lagu sudah ada di DB", flush=True)
 
     # Scrape semua (update juga yang sudah ada)
-    to_scrape = indo_songs
     print(f"Scraping {len(to_scrape)} lagu dari psalmnote...", flush=True)
 
     upsert_batch = []
