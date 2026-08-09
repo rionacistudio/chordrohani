@@ -5,14 +5,20 @@ import os
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-# ── Config ──────────────────────────────────────────────────────────────
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 TABLE = "tb_chord"
 
 API_BASE = "https://www.psalmnote.com/api"
 HEADERS = {"User-Agent": "ChordRhaniBot/1.0 (auto-sync)"}
+
+# Session dengan retry
+session = requests.Session()
+retry = Retry(total=5, backoff_factor=2, status_forcelist=[500, 502, 503, 504])
+session.mount("https://", HTTPAdapter(max_retries=retry))
 
 # ── Supabase ────────────────────────────────────────────────────────────
 
@@ -84,7 +90,7 @@ def song_to_text(song_data: dict) -> str:
 def main():
     # Step 1: Ambil semua artis + album
     print("Step 1: Ambil daftar artis...", flush=True)
-    r = requests.get(f"{API_BASE}/artists", headers=HEADERS, timeout=30)
+    r = session.get(f"{API_BASE}/artists", headers=HEADERS, timeout=60)
     r.raise_for_status()
     artists = r.json()
     print(f"   {len(artists)} artis ditemukan", flush=True)
@@ -104,7 +110,7 @@ def main():
         if i % 100 == 0:
             print(f"   ... {i}/{len(all_albums)} album | {len(all_aliases)} lagu", flush=True)
         try:
-            r = requests.get(f"{API_BASE}/album/{album_alias}", headers=HEADERS, timeout=15)
+            r = session.get(f"{API_BASE}/album/{album_alias}", headers=HEADERS, timeout=20)
             if r.status_code == 200:
                 album_data = r.json()
                 for info in album_data.get("songinfos", []):
@@ -137,7 +143,7 @@ def main():
             print(f"   ... {i}/{len(all_aliases)} | {success} ok, {fail} fail", flush=True)
 
         try:
-            r = requests.get(f"{API_BASE}/song/{alias}", headers=HEADERS, timeout=15)
+            r = session.get(f"{API_BASE}/song/{alias}", headers=HEADERS, timeout=20)
             if r.status_code != 200:
                 fail += 1
                 continue
