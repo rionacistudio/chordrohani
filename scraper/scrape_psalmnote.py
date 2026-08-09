@@ -86,14 +86,14 @@ def song_to_text(song_data: dict) -> str:
 
 def main():
     print("Ambil daftar lagu dari psalmnote...", flush=True)
-    r = requests.get(f"{API_BASE}/songs", headers=HEADERS, timeout=30)
+    r = requests.get(f"{API_BASE}/songs?languageCode=ind", headers=HEADERS, timeout=30)
     r.raise_for_status()
     all_songs = r.json()
-    print(f"   {len(all_songs)} lagu ditemukan", flush=True)
+    print(f"   {len(all_songs)} lagu Indonesia ditemukan", flush=True)
 
-    # Filter hanya lagu Indonesia + verified
-    indo_songs = [s for s in all_songs if s.get("languageCode") == "ind" and s.get("isVerified") == 1]
-    print(f"   {len(indo_songs)} lagu Indonesia (verified)", flush=True)
+    # Filter hanya yang verified
+    indo_songs = [s for s in all_songs if s.get("isVerified") == 1]
+    print(f"   {len(indo_songs)} verified", flush=True)
 
     print("Ambil data existing dari Supabase...", flush=True)
     existing = supabase_get({
