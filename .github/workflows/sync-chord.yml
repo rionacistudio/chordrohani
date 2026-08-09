@@ -1,4 +1,4 @@
-name: Auto-sync Chord dari JRChord
+name: Auto-sync Chord
 
 on:
   schedule:
@@ -20,8 +20,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r scraper/requirements.txt
 
-      - name: Scrape & upsert
+      - name: Scrape JRChord
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -u scraper/scrape.py
+
+      - name: Scrape Psalmnote
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -u scraper/scrape_psalmnote.py
