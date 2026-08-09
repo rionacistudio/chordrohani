@@ -137,6 +137,17 @@ def main():
             penyanyi = detail.get("artist", "").strip()
             base_key = detail.get("chordBase", "").strip()
 
+            # Info tambahan dari songinfoObj
+            info = detail.get("songinfoObj") or {}
+            album_obj = info.get("albumObj") or {}
+            album = album_obj.get("name", "")
+            album_image = album_obj.get("imageUrl", "")
+            if album_image:
+                album_image = f"https://www.psalmnote.com/assets/img/albums/{album_image}"
+            songwriter = info.get("songwriter", "") or ""
+            year = str(album_obj.get("publishedYear", "") or "")
+            songtype = (detail.get("songtypeObj") or {}).get("songtype", "") or ""
+
             if not judul:
                 fail += 1
                 continue
@@ -147,6 +158,11 @@ def main():
                 "base_key": base_key,
                 "isi_chord": chord_text,
                 "lastmod": detail.get("updatedAt", ""),
+                "album": album,
+                "album_image": album_image,
+                "songwriter": songwriter,
+                "year": year,
+                "songtype": songtype,
             })
             success += 1
 
