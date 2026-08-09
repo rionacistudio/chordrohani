@@ -40,9 +40,9 @@ def supabase_upsert(rows: list):
         "Prefer": "resolution=merge-duplicates",
     }, json=rows, timeout=60)
     if not r.ok:
-        print(f"  ✗ Upsert gagal: {r.status_code} {r.text[:500]}")
+        print(f"  ✗ Upsert gagal: {r.status_code} {r.text[:500]}", flush=True)
     r.raise_for_status()
-    print(f"  ↑ Upserted {len(rows)} baris")
+    print(f"  ↑ Upserted {len(rows)} baris", flush=True)
 
 
 # ── Sitemap ─────────────────────────────────────────────────────────────
