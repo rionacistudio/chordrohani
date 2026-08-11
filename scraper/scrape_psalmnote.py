@@ -175,6 +175,7 @@ def main():
             songwriter = info.get("songwriter", "") or ""
             year = str(album_obj.get("publishedYear", "") or "")
             songtype = (detail.get("songtypeObj") or {}).get("songtype", "") or ""
+            language = detail.get("languageCode", "") or ""
 
             upsert_batch.append({
                 "judul": judul,
@@ -187,6 +188,7 @@ def main():
                 "songwriter": songwriter,
                 "year": year,
                 "songtype": songtype,
+                "language": language,
             })
             success += 1
 

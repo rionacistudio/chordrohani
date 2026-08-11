@@ -139,6 +139,7 @@ def scrape_song(url: str) -> dict | None:
             "penyanyi": penyanyi,
             "base_key": base_key,
             "isi_chord": chord_text,
+            "language": "",
         }
     except Exception as e:
         print(f"  ✗ Error: {e}", flush=True)
