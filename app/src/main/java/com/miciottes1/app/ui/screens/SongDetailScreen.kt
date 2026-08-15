@@ -407,7 +407,17 @@ fun SongDetailScreen(
                                             settings.domStorageEnabled = true
                                             settings.userAgentString =
                                                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                                            webViewClient = android.webkit.WebViewClient()
+                                            webViewClient = object : android.webkit.WebViewClient() {
+                                                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                                                    super.onPageFinished(view, url)
+                                                    val css = "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header{display:none!important;}" +
+                                                        "body{margin:0!important;padding:0!important;background:#000!important;}"
+                                                    view?.evaluateJavascript(
+                                                        "(function(){var s=document.createElement('style');s.textContent=\"" + css + "\";document.head.appendChild(s);})()",
+                                                        null,
+                                                    )
+                                                }
+                                            }
                                             loadUrl("https://m.youtube.com/watch?v=$videoId&autoplay=1")
                                         }
                                     },
