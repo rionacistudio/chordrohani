@@ -408,14 +408,17 @@ fun SongDetailScreen(
                                             settings.userAgentString =
                                                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
                                             webViewClient = object : android.webkit.WebViewClient() {
-                                                override fun shouldOverrideUrlLoading(
-                                                    view: android.webkit.WebView?,
-                                                    request: android.webkit.WebResourceRequest?,
-                                                ): Boolean {
-                                                    return false
+                                                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                                                    super.onPageFinished(view, url)
+                                                    view?.evaluateJavascript(
+                                                        "var s=document.createElement('style');" +
+                                                        "s.textContent='#masthead-container,ytm-slim-status-bar-header,.slim-banner,header,ytm-topbar,.mobile-topbar,app-drawer{display:none!important}';" +
+                                                        "document.head.appendChild(s);",
+                                                        null,
+                                                    )
                                                 }
                                             }
-                                            loadUrl("https://www.youtube.com/watch?v=$videoId&autoplay=1")
+                                            loadUrl("https://m.youtube.com/watch?v=$videoId&autoplay=1")
                                         }
                                     },
                                     onRelease = { it.destroy() },
