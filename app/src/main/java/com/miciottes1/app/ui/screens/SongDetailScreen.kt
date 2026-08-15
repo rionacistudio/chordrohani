@@ -807,8 +807,6 @@ private fun YouTubePlayerViewCompose(videoId: String, modifier: Modifier = Modif
                 val options = IFramePlayerOptions.Builder(ctx)
                     .controls(1)
                     .autoplay(1)
-                    .fullscreen(1)
-                    .origin("https://www.youtube.com")
                     .build()
                 initialize(listener, true, options)
             }
