@@ -93,6 +93,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.miciottes1.app.R
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -335,12 +336,15 @@ fun SongDetailScreen(
                             ) {
                                 if (summary.album_image.isNotBlank()) {
                                     AsyncImage(
-                                        model = summary.album_image.replace(
-                                            "/assets/img/albums/",
-                                            "/album-image/",
-                                        ),
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(summary.album_image.replace(
+                                                "/assets/img/albums/",
+                                                "/album-image/",
+                                            ))
+                                            .build(),
                                         contentDescription = "Album ${summary.album}",
                                         contentScale = ContentScale.Crop,
+                                        error = painterResource(R.drawable.ic_music),
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 } else {
