@@ -81,5 +81,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.1.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
 
+    // YouTube IFrame Player
+    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:13.0.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -93,7 +93,12 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.miciottes1.app.R
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.miciottes1.app.data.ChordTransposer
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -394,42 +399,13 @@ fun SongDetailScreen(
                             exit = shrinkVertically() + fadeOut(),
                         ) {
                             youtubeVideoId?.let { videoId ->
-                                AndroidView(
+                                YouTubePlayerViewCompose(
+                                    videoId = videoId,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 10.dp)
                                         .aspectRatio(16f / 9f)
                                         .clip(RoundedCornerShape(10.dp)),
-                                    factory = { ctx ->
-                                        android.webkit.WebView(ctx).apply {
-                                            setBackgroundColor(android.graphics.Color.BLACK)
-                                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                                            settings.javaScriptEnabled = true
-                                            settings.domStorageEnabled = true
-                                            settings.mediaPlaybackRequiresUserGesture = false
-                                            settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
-                                            android.webkit.CookieManager.getInstance().setAcceptCookie(true)
-                                            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                            webViewClient = android.webkit.WebViewClient()
-                                            webChromeClient = object : android.webkit.WebChromeClient() {
-                                                private var customView: android.view.View? = null
-                                                override fun onShowCustomView(view: android.view.View, callback: android.webkit.WebChromeClient.CustomViewCallback) {
-                                                    customView = view
-                                                }
-                                                override fun onHideCustomView() {
-                                                    customView = null
-                                                }
-                                            }
-                                            val youtubeUrl = "https://www.youtube.com/embed/$videoId?playsinline=1&rel=0"
-                                            val headers = mapOf("Referer" to "https://${ctx.packageName}")
-                                            loadUrl(youtubeUrl, headers)
-                                        }
-                                    },
-                                    onRelease = { webView ->
-                                        webView.stopLoading()
-                                        webView.loadUrl("about:blank")
-                                        webView.destroy()
-                                    },
                                 )
                             }
                         }
@@ -812,6 +788,36 @@ private fun extractYoutubeVideoId(url: String): String? {
     ).find(value)
     return match?.groupValues?.getOrNull(1)
         ?: value.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
+}
+
+@Composable
+private fun YouTubePlayerViewCompose(videoId: String, modifier: Modifier = Modifier) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            YouTubePlayerView(ctx).apply {
+                enableAutomaticInitialization = false
+                lifecycleOwner.lifecycle.addObserver(this)
+                val listener = object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                }
+                val options = IFramePlayerOptions.Builder(ctx)
+                    .controls(1)
+                    .autoplay(1)
+                    .fullscreen(1)
+                    .origin("https://www.youtube.com")
+                    .build()
+                initialize(listener, true, options)
+            }
+        },
+        onRelease = { playerView ->
+            lifecycleOwner.lifecycle.removeObserver(playerView)
+            playerView.release()
+        },
+    )
 }
 
 @Composable
