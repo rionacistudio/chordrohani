@@ -397,8 +397,8 @@ fun SongDetailScreen(
                                 AndroidView(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .height(240.dp)
                                         .padding(top = 10.dp)
-                                        .aspectRatio(16f / 9f)
                                         .clip(RoundedCornerShape(10.dp)),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
@@ -407,22 +407,7 @@ fun SongDetailScreen(
                                             settings.domStorageEnabled = true
                                             settings.userAgentString =
                                                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                                            webViewClient = object : android.webkit.WebViewClient() {
-                                                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-                                                    super.onPageFinished(view, url)
-                                                    val css = (
-                                                        "#masthead-container,.slim-banner,header,ytm-topbar,.mobile-topbar,app-drawer,ytm-section-list-renderer>ytm-section-list-header-renderer{display:none!important;}" +
-                                                        "html,body{margin:0!important;padding:0!important;overflow:hidden!important;background:#000!important;width:100vw!important;height:100vh!important;}" +
-                                                        "#page-manager,ytd-watch-flexy,#columns,#secondary,#comments,#related,ytd-popup-container{display:none!important;margin:0!important;padding:0!important;}" +
-                                                        "#movie_player{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:99999!important;background:#000!important;}" +
-                                                        "#movie_player video{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:99999!important;object-fit:contain!important;}"
-                                                    )
-                                                    view?.evaluateJavascript(
-                                                        "(function(){var s=document.createElement('style');s.textContent='" + css + "';document.head.appendChild(s);})()",
-                                                        null,
-                                                    )
-                                                }
-                                            }
+                                            webViewClient = android.webkit.WebViewClient()
                                             loadUrl("https://m.youtube.com/watch?v=$videoId&autoplay=1")
                                         }
                                     },
