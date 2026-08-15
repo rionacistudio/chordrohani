@@ -401,8 +401,8 @@ fun SongDetailScreen(
                                         <meta name="viewport" content="width=device-width,initial-scale=1">
                                         <style>
                                             *{margin:0;padding:0;box-sizing:border-box;}
-                                            html,body{width:100%;height:100%;background:#000;overflow:hidden;}
-                                            iframe{width:100%;height:100%;border:none;display:block;}
+                                            html,body{width:100%;height:100%;background:#000;}
+                                            iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
                                         </style>
                                     </head>
                                     <body>
