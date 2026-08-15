@@ -399,28 +399,15 @@ fun SongDetailScreen(
                                         .fillMaxWidth()
                                         .padding(top = 10.dp)
                                         .aspectRatio(16f / 9f)
-                                        .clip(RoundedCornerShape(10.dp)),
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color.Black),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
                                             setBackgroundColor(android.graphics.Color.BLACK)
                                             settings.javaScriptEnabled = true
                                             settings.mediaPlaybackRequiresUserGesture = false
                                             settings.domStorageEnabled = true
-                                            settings.userAgentString =
-                                                "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                                            webViewClient = object : android.webkit.WebViewClient() {
-                                                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-                                                    super.onPageFinished(view, url)
-                                                    view?.evaluateJavascript(
-                                                        "(function(){var s=document.createElement('style');s.textContent=\"" +
-                                                        "*{margin:0!important;padding:0!important;box-sizing:border-box!important;}" +
-                                                        "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header,ytm-section-list-renderer>ytm-section-list-header-renderer,#secondary,#comments,#related{display:none!important;}" +
-                                                        "html,body,#page-manager,ytd-watch-flexy,#columns,#primary-inner,#player-container,#movie_player{background:#000!important;margin:0!important;padding:0!important;width:100%!important;}" +
-                                                        "\";document.head.appendChild(s);})()",
-                                                        null,
-                                                    )
-                                                }
-                                            }
+                                            webViewClient = android.webkit.WebViewClient()
                                             loadUrl("https://m.youtube.com/watch?v=$videoId&autoplay=1")
                                         }
                                     },
