@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity(), SingletonImageLoader.Factory {
             .diskCache {
                 DiskCache.Builder()
                     .directory(File(context.cacheDir, "image_cache").absolutePath.toPath())
-                    .maxSizePercent(0.02)
+                    .maximumMaxSizeBytes(50L * 1024 * 1024)
                     .build()
             }
             .build()
