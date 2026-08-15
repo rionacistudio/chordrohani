@@ -6,10 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
@@ -80,7 +76,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -94,7 +89,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.miciottes1.app.R
 import com.miciottes1.app.data.ChordTransposer
@@ -258,7 +252,6 @@ fun SongDetailScreen(
                     val lines = remember(song.isi_chord) { parseSongBody(song.isi_chord) }
                     val currentKey = ChordTransposer.transposeChordToken(song.base_key, viewModel.transpose)
                     val youtubeVideoId = remember(song.youtube_url) { extractYoutubeVideoId(song.youtube_url) }
-                    var playerVisible by remember(song.judul, song.penyanyi) { mutableStateOf(false) }
                     var selectedTokenId by remember(song.isi_chord) { mutableStateOf<String?>(null) }
                     val usedChords = remember(lines, viewModel.transpose) {
                         lines.filter { it.type == LineType.CHORD }
@@ -356,7 +349,13 @@ fun SongDetailScreen(
 
                         Surface(
                             onClick = {
-                                if (youtubeVideoId != null) playerVisible = !playerVisible
+                                if (youtubeVideoId != null) {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://www.youtube.com/watch?v=$youtubeVideoId"),
+                                    )
+                                    context.startActivity(intent)
+                                }
                             },
                             shape = RoundedCornerShape(10.dp),
                             color = if (youtubeVideoId != null) MaterialTheme.colorScheme.primary
@@ -380,30 +379,12 @@ fun SongDetailScreen(
                                 Text(
                                     text = when {
                                         youtubeVideoId == null -> "Musik Belum Tersedia"
-                                        playerVisible -> "Tutup Pemutar"
                                         else -> "Putar Musik"
                                     },
                                     fontWeight = FontWeight.Bold,
                                     color = if (youtubeVideoId != null) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(start = 8.dp),
-                                )
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visible = playerVisible && youtubeVideoId != null,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut(),
-                        ) {
-                            youtubeVideoId?.let { videoId ->
-                                YouTubeEmbeddedPlayer(
-                                    videoId = videoId,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 10.dp)
-                                        .aspectRatio(16f / 9f)
-                                        .clip(RoundedCornerShape(10.dp)),
                                 )
                             }
                         }
@@ -786,29 +767,6 @@ private fun extractYoutubeVideoId(url: String): String? {
     ).find(value)
     return match?.groupValues?.getOrNull(1)
         ?: value.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
-}
-
-@Composable
-private fun YouTubeEmbeddedPlayer(videoId: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    AndroidView(
-        modifier = modifier,
-        factory = {
-            android.webkit.WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.domStorageEnabled = true
-                webViewClient = android.webkit.WebViewClient()
-                loadUrl("https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&origin=https://www.youtube.com")
-            }
-        },
-        update = { webView ->
-            webView.loadUrl("https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&origin=https://www.youtube.com")
-        },
-        onRelease = { webView ->
-            webView.destroy()
-        },
-    )
 }
 
 @Composable
