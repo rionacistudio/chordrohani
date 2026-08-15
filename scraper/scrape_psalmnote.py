@@ -176,6 +176,13 @@ def main():
             year = str(album_obj.get("publishedYear", "") or "")
             songtype = (detail.get("songtypeObj") or {}).get("songtype", "") or ""
             language = detail.get("languageCode", "") or ""
+            youtube_items = detail.get("youtube") or []
+            youtube_url = ""
+            if youtube_items:
+                youtube = youtube_items[0] or {}
+                youtube_url = youtube.get("fullUrl", "") or ""
+                if not youtube_url and youtube.get("url"):
+                    youtube_url = f"https://www.youtube.com/watch?v={youtube['url']}"
 
             upsert_batch.append({
                 "judul": judul,
@@ -189,6 +196,7 @@ def main():
                 "year": year,
                 "songtype": songtype,
                 "language": language,
+                "youtube_url": youtube_url,
             })
             success += 1
 
