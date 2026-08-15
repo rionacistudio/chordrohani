@@ -2,6 +2,7 @@
 Strategi: artists → albums → songinfos → song detail."""
 
 import os
+import socket
 import time
 
 import requests
@@ -12,12 +13,19 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 TABLE = "tb_chord"
 
-API_BASES = (
-    "https://www.psalmnote.com/api",
-    "https://psalmnote.com/api",
-)
-API_BASE = API_BASES[0]
+API_BASE = "https://www.psalmnote.com/api"
 HEADERS = {"User-Agent": "ChordRhaniBot/1.0 (auto-sync)"}
+
+# GitHub-hosted runner kadang memilih alamat IPv6 Psalmnote meski tidak
+# memiliki rute IPv6. Paksa koneksi scraper menggunakan alamat IPv4.
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+
+socket.getaddrinfo = ipv4_getaddrinfo
 
 # Session dengan retry
 session = requests.Session()
@@ -92,32 +100,11 @@ def song_to_text(song_data: dict) -> str:
 # ── Main ────────────────────────────────────────────────────────────────
 
 def main():
-    global API_BASE
     # Step 1: Ambil semua artis + album
     print("Step 1: Ambil daftar artis...", flush=True)
-    artists = None
-    last_error = None
-    for attempt in range(1, 7):
-        for api_base in API_BASES:
-            try:
-                print(f"   Percobaan {attempt}/6 via {api_base}...", flush=True)
-                r = session.get(f"{api_base}/artists", headers=HEADERS, timeout=60)
-                r.raise_for_status()
-                artists = r.json()
-                API_BASE = api_base
-                break
-            except requests.RequestException as error:
-                last_error = error
-                print(f"   Gagal terhubung: {error}", flush=True)
-        if artists is not None:
-            break
-        if attempt < 6:
-            wait_seconds = attempt * 30
-            print(f"   Tunggu {wait_seconds} detik sebelum mencoba lagi...", flush=True)
-            time.sleep(wait_seconds)
-
-    if artists is None:
-        raise RuntimeError("Psalmnote tidak dapat dijangkau setelah 6 percobaan") from last_error
+    r = session.get(f"{API_BASE}/artists", headers=HEADERS, timeout=60)
+    r.raise_for_status()
+    artists = r.json()
     print(f"   {len(artists)} artis ditemukan", flush=True)
 
     # Kumpulkan semua album alias
