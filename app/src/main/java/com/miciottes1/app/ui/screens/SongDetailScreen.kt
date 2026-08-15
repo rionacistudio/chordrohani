@@ -430,6 +430,7 @@ fun SongDetailScreen(
                                             settings.mediaPlaybackRequiresUserGesture = false
                                             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
                                             android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                            webChromeClient = android.webkit.WebChromeClient()
                                             webViewClient = android.webkit.WebViewClient()
                                             loadDataWithBaseURL(
                                                 "https://chordku.app/",
