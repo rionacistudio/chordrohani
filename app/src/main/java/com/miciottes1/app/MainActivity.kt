@@ -63,12 +63,27 @@ import com.miciottes1.app.ui.theme.AgonAppTheme
 import com.miciottes1.app.viewmodel.SongListViewModel
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import okio.Path.Companion.toPath
+import java.io.File
 
 class MainActivity : ComponentActivity(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory()) }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(File(context.cacheDir, "image_cache").absolutePath.toPath())
+                    .maxSizePercent(0.02)
+                    .build()
+            }
             .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
