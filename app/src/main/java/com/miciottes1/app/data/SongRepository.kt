@@ -27,12 +27,13 @@ class SongRepository(context: Context) {
 
     suspend fun fetchDetailFromApi(judul: String, penyanyi: String): Song? {
         val song = SupabaseRepository.fetchDetail(judul, penyanyi) ?: return null
+        val existing = withContext(Dispatchers.IO) { dao.getDetail(judul, penyanyi) }
         val entity = SongEntity(
             judul = song.judul,
             penyanyi = song.penyanyi,
             base_key = song.base_key,
-            album = "",
-            album_image = "",
+            album = existing?.album ?: "",
+            album_image = existing?.album_image ?: "",
             lastmod = song.lastmod,
             isi_chord = song.isi_chord,
             language = song.language,
