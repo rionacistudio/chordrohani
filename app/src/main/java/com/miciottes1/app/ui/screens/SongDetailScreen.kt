@@ -410,10 +410,15 @@ fun SongDetailScreen(
                                             webViewClient = object : android.webkit.WebViewClient() {
                                                 override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                                     super.onPageFinished(view, url)
+                                                    val css = (
+                                                        "#masthead-container,.slim-banner,header,ytm-topbar,.mobile-topbar,app-drawer,ytm-section-list-renderer>ytm-section-list-header-renderer{display:none!important;}" +
+                                                        "html,body{margin:0!important;padding:0!important;overflow:hidden!important;background:#000!important;width:100vw!important;height:100vh!important;}" +
+                                                        "#page-manager,ytd-watch-flexy,#columns,#secondary,#comments,#related,ytd-popup-container{display:none!important;margin:0!important;padding:0!important;}" +
+                                                        "#movie_player{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:99999!important;background:#000!important;}" +
+                                                        "#movie_player video{position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:99999!important;object-fit:contain!important;}"
+                                                    )
                                                     view?.evaluateJavascript(
-                                                        "var s=document.createElement('style');" +
-                                                        "s.textContent='#masthead-container,ytm-slim-status-bar-header,.slim-banner,header,ytm-topbar,.mobile-topbar,app-drawer{display:none!important}';" +
-                                                        "document.head.appendChild(s);",
+                                                        "(function(){var s=document.createElement('style');s.textContent='" + css + "';document.head.appendChild(s);})()",
                                                         null,
                                                     )
                                                 }
