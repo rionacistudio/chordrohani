@@ -42,4 +42,16 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python -u scraper/scrape_psalmnote.py
+        run: |
+          for attempt in 1 2 3; do
+            echo "Menjalankan Psalmnote scraper (percobaan $attempt/3)..."
+            if python -u scraper/scrape_psalmnote.py; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Scraper gagal. Tunggu 120 detik sebelum mencoba ulang..."
+              sleep 120
+            fi
+          done
+          echo "Psalmnote scraper gagal setelah 3 percobaan."
+          exit 1
