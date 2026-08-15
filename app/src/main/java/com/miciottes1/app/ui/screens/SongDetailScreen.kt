@@ -402,6 +402,7 @@ fun SongDetailScreen(
                                         .clip(RoundedCornerShape(10.dp)),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
+                                            setBackgroundColor(android.graphics.Color.BLACK)
                                             settings.javaScriptEnabled = true
                                             settings.mediaPlaybackRequiresUserGesture = false
                                             settings.domStorageEnabled = true
@@ -410,13 +411,12 @@ fun SongDetailScreen(
                                             webViewClient = object : android.webkit.WebViewClient() {
                                                 override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                                     super.onPageFinished(view, url)
-                                                    val css = (
-                                                        "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header{display:none!important;}" +
-                                                        "html,body,#page-manager,ytd-watch-flexy,#columns,#primary-inner,#player-container,#movie_player{margin:0!important;padding:0!important;background:#000!important;}" +
-                                                        "*{box-sizing:border-box!important;}"
-                                                    )
                                                     view?.evaluateJavascript(
-                                                        "(function(){var s=document.createElement('style');s.textContent=\"" + css + "\";document.head.appendChild(s);})()",
+                                                        "(function(){var s=document.createElement('style');s.textContent=\"" +
+                                                        "*{margin:0!important;padding:0!important;box-sizing:border-box!important;}" +
+                                                        "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header,ytm-section-list-renderer>ytm-section-list-header-renderer,#secondary,#comments,#related{display:none!important;}" +
+                                                        "html,body,#page-manager,ytd-watch-flexy,#columns,#primary-inner,#player-container,#movie_player{background:#000!important;margin:0!important;padding:0!important;width:100%!important;}" +
+                                                        "\";document.head.appendChild(s);})()",
                                                         null,
                                                     )
                                                 }
