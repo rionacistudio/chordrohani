@@ -19,6 +19,18 @@ android {
         versionName = "1.0"
     }
 
+    val legacyDebugKeystore = rootProject.file("debug.keystore")
+    if (legacyDebugKeystore.exists()) {
+        signingConfigs {
+            getByName("debug") {
+                storeFile = legacyDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
