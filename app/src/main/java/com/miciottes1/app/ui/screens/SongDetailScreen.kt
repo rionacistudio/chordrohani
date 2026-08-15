@@ -97,11 +97,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.miciottes1.app.R
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.miciottes1.app.data.ChordTransposer
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -795,37 +790,23 @@ private fun extractYoutubeVideoId(url: String): String? {
 
 @Composable
 private fun YouTubeEmbeddedPlayer(videoId: String, modifier: Modifier = Modifier) {
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
     AndroidView(
         modifier = modifier,
-        factory = { context ->
-            YouTubePlayerView(context).apply {
-                enableAutomaticInitialization = false
-                tag = videoId
-                lifecycleOwner.lifecycle.addObserver(this)
-                val listener = object : AbstractYouTubePlayerListener() {
-                    override fun onReady(youTubePlayer: YouTubePlayer) {
-                        youTubePlayer.cueVideo(videoId, 0f)
-                    }
-
-                    override fun onError(
-                        youTubePlayer: YouTubePlayer,
-                        error: PlayerConstants.PlayerError,
-                    ) {
-                        android.util.Log.e("ChordKuPlayer", "YouTube player error: $error")
-                    }
-                }
-                val options = IFramePlayerOptions.Builder(context)
-                    .controls(1)
-                    .fullscreen(1)
-                    .origin("https://www.youtube.com")
-                    .build()
-                initialize(listener, true, options)
+        factory = {
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.domStorageEnabled = true
+                webViewClient = android.webkit.WebViewClient()
+                loadUrl("https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&origin=https://www.youtube.com")
             }
         },
-        onRelease = { playerView ->
-            lifecycleOwner.lifecycle.removeObserver(playerView)
-            playerView.release()
+        update = { webView ->
+            webView.loadUrl("https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&origin=https://www.youtube.com")
+        },
+        onRelease = { webView ->
+            webView.destroy()
         },
     )
 }
