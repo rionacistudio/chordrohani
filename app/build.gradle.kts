@@ -69,5 +69,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.1.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
 
+    // Lifecycle-aware wrapper untuk YouTube IFrame Player API.
+    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.2")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

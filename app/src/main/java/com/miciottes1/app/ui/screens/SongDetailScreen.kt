@@ -1,11 +1,5 @@
 package com.miciottes1.app.ui.screens
 
-import android.annotation.SuppressLint
-import android.graphics.Color as AndroidColor
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.view.View
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -100,8 +94,12 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.miciottes1.app.R
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.miciottes1.app.data.ChordTransposer
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -793,69 +791,26 @@ private fun extractYoutubeVideoId(url: String): String? {
         ?: value.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun YouTubeEmbeddedPlayer(videoId: String, modifier: Modifier = Modifier) {
-    val html = remember(videoId) {
-        """
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-          <style>
-            html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
-            iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
-          </style>
-        </head>
-        <body>
-          <iframe
-            src="https://www.youtube.com/embed/$videoId?playsinline=1&rel=0&enablejsapi=1&origin=https://www.youtube.com"
-            title="YouTube video player"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen>
-          </iframe>
-        </body>
-        </html>
-        """.trimIndent()
-    }
+    val lifecycleOwner = LocalLifecycleOwner.current
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            WebView(context).apply {
-                setBackgroundColor(AndroidColor.BLACK)
-                setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = true
-                settings.loadsImagesAutomatically = true
-                webViewClient = WebViewClient()
-                webChromeClient = WebChromeClient()
+            YouTubePlayerView(context).apply {
+                enableAutomaticInitialization = false
                 tag = videoId
-                loadDataWithBaseURL(
-                    "https://www.youtube.com",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null,
-                )
+                lifecycleOwner.lifecycle.addObserver(this)
+                initialize(object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                })
             }
         },
-        update = { webView ->
-            if (webView.tag != videoId) {
-                webView.tag = videoId
-                webView.loadDataWithBaseURL(
-                    "https://www.youtube.com",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null,
-                )
-            }
-        },
-        onRelease = { webView ->
-            webView.stopLoading()
-            webView.loadUrl("about:blank")
-            webView.destroy()
+        onRelease = { playerView ->
+            lifecycleOwner.lifecycle.removeObserver(playerView)
+            playerView.release()
         },
     )
 }
