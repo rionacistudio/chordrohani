@@ -410,8 +410,11 @@ fun SongDetailScreen(
                                             webViewClient = object : android.webkit.WebViewClient() {
                                                 override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
                                                     super.onPageFinished(view, url)
-                                                    val css = "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header{display:none!important;}" +
-                                                        "body{margin:0!important;padding:0!important;background:#000!important;}"
+                                                    val css = (
+                                                        "#masthead-container,.slim-banner,ytm-topbar,.mobile-topbar,header{display:none!important;}" +
+                                                        "html,body,#page-manager,ytd-watch-flexy,#columns,#primary-inner,#player-container,#movie_player{margin:0!important;padding:0!important;background:#000!important;}" +
+                                                        "*{box-sizing:border-box!important;}"
+                                                    )
                                                     view?.evaluateJavascript(
                                                         "(function(){var s=document.createElement('style');s.textContent=\"" + css + "\";document.head.appendChild(s);})()",
                                                         null,
