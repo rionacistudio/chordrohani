@@ -398,7 +398,7 @@ fun SongDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 10.dp)
-                                        .height(220.dp)
+                                        .aspectRatio(16f / 9f)
                                         .clip(RoundedCornerShape(10.dp)),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
