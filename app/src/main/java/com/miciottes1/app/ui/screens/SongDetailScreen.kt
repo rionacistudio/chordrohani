@@ -403,18 +403,25 @@ fun SongDetailScreen(
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
                                             setBackgroundColor(android.graphics.Color.BLACK)
+                                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                                             settings.javaScriptEnabled = true
                                             settings.domStorageEnabled = true
-                                            settings.mediaPlaybackRequiresUserGesture = true
+                                            settings.mediaPlaybackRequiresUserGesture = false
+                                            settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
                                             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
                                             android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                             webViewClient = android.webkit.WebViewClient()
-                                            webChromeClient = android.webkit.WebChromeClient()
-                                            val youtubeUrl =
-                                                "https://www.youtube.com/embed/$videoId?playsinline=1&rel=0"
-                                            val headers = mapOf(
-                                                "Referer" to "https://${ctx.packageName}"
-                                            )
+                                            webChromeClient = object : android.webkit.WebChromeClient() {
+                                                private var customView: android.view.View? = null
+                                                override fun onShowCustomView(view: android.view.View, callback: android.webkit.WebChromeClient.CustomViewCallback) {
+                                                    customView = view
+                                                }
+                                                override fun onHideCustomView() {
+                                                    customView = null
+                                                }
+                                            }
+                                            val youtubeUrl = "https://www.youtube.com/embed/$videoId?playsinline=1&rel=0"
+                                            val headers = mapOf("Referer" to "https://${ctx.packageName}")
                                             loadUrl(youtubeUrl, headers)
                                         }
                                     },
