@@ -98,7 +98,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.miciottes1.app.R
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.miciottes1.app.data.ChordTransposer
 import kotlin.math.atan2
@@ -801,11 +803,24 @@ private fun YouTubeEmbeddedPlayer(videoId: String, modifier: Modifier = Modifier
                 enableAutomaticInitialization = false
                 tag = videoId
                 lifecycleOwner.lifecycle.addObserver(this)
-                initialize(object : AbstractYouTubePlayerListener() {
+                val listener = object : AbstractYouTubePlayerListener() {
                     override fun onReady(youTubePlayer: YouTubePlayer) {
                         youTubePlayer.cueVideo(videoId, 0f)
                     }
-                })
+
+                    override fun onError(
+                        youTubePlayer: YouTubePlayer,
+                        error: PlayerConstants.PlayerError,
+                    ) {
+                        android.util.Log.e("ChordKuPlayer", "YouTube player error: $error")
+                    }
+                }
+                val options = IFramePlayerOptions.Builder(context)
+                    .controls(1)
+                    .fullscreen(1)
+                    .origin("https://www.youtube.com")
+                    .build()
+                initialize(listener, true, options)
             }
         },
         onRelease = { playerView ->
