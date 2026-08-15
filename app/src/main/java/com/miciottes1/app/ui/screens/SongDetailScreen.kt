@@ -424,9 +424,12 @@ fun SongDetailScreen(
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
                                             setBackgroundColor(android.graphics.Color.BLACK)
+                                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                                             settings.javaScriptEnabled = true
                                             settings.domStorageEnabled = true
                                             settings.mediaPlaybackRequiresUserGesture = false
+                                            android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+                                            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                             webViewClient = android.webkit.WebViewClient()
                                             loadDataWithBaseURL(
                                                 "https://chordku.app/",
