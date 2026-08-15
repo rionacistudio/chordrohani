@@ -9,4 +9,6 @@
 *.apk
 *.aab
 *.log
+__pycache__/
+*.pyc
 **/.DS_Store

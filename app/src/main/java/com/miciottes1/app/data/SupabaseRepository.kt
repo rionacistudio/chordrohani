@@ -68,7 +68,10 @@ object SupabaseRepository {
 
     suspend fun fetchDetail(judul: String, penyanyi: String): Song? = withContext(Dispatchers.IO) {
         val url = BASE_URL.toHttpUrl().newBuilder()
-            .addQueryParameter("select", "judul,penyanyi,base_key,isi_chord,lastmod,language")
+            .addQueryParameter(
+                "select",
+                "judul,penyanyi,base_key,isi_chord,lastmod,language,youtube_url",
+            )
             .addQueryParameter("judul", "eq.$judul")
             .addQueryParameter("penyanyi", "eq.$penyanyi")
             .addQueryParameter("limit", "1")
