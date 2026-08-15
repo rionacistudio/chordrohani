@@ -394,54 +394,35 @@ fun SongDetailScreen(
                             exit = shrinkVertically() + fadeOut(),
                         ) {
                             youtubeVideoId?.let { videoId ->
-                                val html = """
-                                    <!DOCTYPE html>
-                                    <html>
-                                    <head>
-                                        <meta name="viewport" content="width=device-width,initial-scale=1">
-                                        <style>
-                                            *{margin:0;padding:0;box-sizing:border-box;}
-                                            html,body{width:100%;height:100%;background:#000;}
-                                            iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
-                                        </style>
-                                    </head>
-                                    <body>
-                                        <iframe
-                                            src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1"
-                                            frameborder="0"
-                                            allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;web-share"
-                                            allowfullscreen
-                                        ></iframe>
-                                    </body>
-                                    </html>
-                                """.trimIndent()
                                 AndroidView(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 10.dp)
-                                        .aspectRatio(16f / 9f)
+                                        .height(220.dp)
                                         .clip(RoundedCornerShape(10.dp)),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
                                             setBackgroundColor(android.graphics.Color.BLACK)
-                                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                                             settings.javaScriptEnabled = true
                                             settings.domStorageEnabled = true
-                                            settings.mediaPlaybackRequiresUserGesture = false
+                                            settings.mediaPlaybackRequiresUserGesture = true
                                             android.webkit.CookieManager.getInstance().setAcceptCookie(true)
                                             android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                            webChromeClient = android.webkit.WebChromeClient()
                                             webViewClient = android.webkit.WebViewClient()
-                                            loadDataWithBaseURL(
-                                                "https://chordku.app/",
-                                                html,
-                                                "text/html",
-                                                "UTF-8",
-                                                null,
+                                            webChromeClient = android.webkit.WebChromeClient()
+                                            val youtubeUrl =
+                                                "https://www.youtube.com/embed/$videoId?playsinline=1&rel=0"
+                                            val headers = mapOf(
+                                                "Referer" to "https://${ctx.packageName}"
                                             )
+                                            loadUrl(youtubeUrl, headers)
                                         }
                                     },
-                                    onRelease = { it.destroy() },
+                                    onRelease = { webView ->
+                                        webView.stopLoading()
+                                        webView.loadUrl("about:blank")
+                                        webView.destroy()
+                                    },
                                 )
                             }
                         }
