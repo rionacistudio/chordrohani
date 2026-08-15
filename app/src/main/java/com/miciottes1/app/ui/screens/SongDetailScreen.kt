@@ -394,13 +394,32 @@ fun SongDetailScreen(
                             exit = shrinkVertically() + fadeOut(),
                         ) {
                             youtubeVideoId?.let { videoId ->
+                                val html = """
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width,initial-scale=1">
+                                        <style>
+                                            *{margin:0;padding:0;box-sizing:border-box;}
+                                            html,body{width:100%;height:100%;background:#000;overflow:hidden;}
+                                            iframe{width:100%;height:100%;border:none;display:block;}
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <iframe
+                                            src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0"
+                                            allow="autoplay;encrypted-media"
+                                            allowfullscreen
+                                        ></iframe>
+                                    </body>
+                                    </html>
+                                """.trimIndent()
                                 AndroidView(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 10.dp)
                                         .aspectRatio(16f / 9f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color.Black),
+                                        .clip(RoundedCornerShape(10.dp)),
                                     factory = { ctx ->
                                         android.webkit.WebView(ctx).apply {
                                             setBackgroundColor(android.graphics.Color.BLACK)
@@ -408,7 +427,13 @@ fun SongDetailScreen(
                                             settings.mediaPlaybackRequiresUserGesture = false
                                             settings.domStorageEnabled = true
                                             webViewClient = android.webkit.WebViewClient()
-                                            loadUrl("https://m.youtube.com/watch?v=$videoId&autoplay=1")
+                                            loadDataWithBaseURL(
+                                                "https://www.youtube.com",
+                                                html,
+                                                "text/html",
+                                                "UTF-8",
+                                                null,
+                                            )
                                         }
                                     },
                                     onRelease = { it.destroy() },
