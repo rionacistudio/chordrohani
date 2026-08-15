@@ -394,6 +394,27 @@ fun SongDetailScreen(
                             exit = shrinkVertically() + fadeOut(),
                         ) {
                             youtubeVideoId?.let { videoId ->
+                                val html = """
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width,initial-scale=1">
+                                        <style>
+                                            *{margin:0;padding:0;box-sizing:border-box;}
+                                            html,body{width:100%;height:100%;background:#000;overflow:hidden;}
+                                            iframe{width:100%;height:100%;border:none;display:block;}
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <iframe
+                                            src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1"
+                                            frameborder="0"
+                                            allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;web-share"
+                                            allowfullscreen
+                                        ></iframe>
+                                    </body>
+                                    </html>
+                                """.trimIndent()
                                 AndroidView(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -407,7 +428,13 @@ fun SongDetailScreen(
                                             settings.domStorageEnabled = true
                                             settings.mediaPlaybackRequiresUserGesture = false
                                             webViewClient = android.webkit.WebViewClient()
-                                            loadUrl("https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1")
+                                            loadDataWithBaseURL(
+                                                "https://chordku.app/",
+                                                html,
+                                                "text/html",
+                                                "UTF-8",
+                                                null,
+                                            )
                                         }
                                     },
                                     onRelease = { it.destroy() },
