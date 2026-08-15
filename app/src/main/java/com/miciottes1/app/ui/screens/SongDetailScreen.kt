@@ -5,6 +5,7 @@ import android.graphics.Color as AndroidColor
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.view.View
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -795,21 +796,61 @@ private fun extractYoutubeVideoId(url: String): String? {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun YouTubeEmbeddedPlayer(videoId: String, modifier: Modifier = Modifier) {
+    val html = remember(videoId) {
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+          <style>
+            html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+            iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+          </style>
+        </head>
+        <body>
+          <iframe
+            src="https://www.youtube.com/embed/$videoId?playsinline=1&rel=0&enablejsapi=1&origin=https://www.youtube.com"
+            title="YouTube video player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </body>
+        </html>
+        """.trimIndent()
+    }
     AndroidView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
                 setBackgroundColor(AndroidColor.BLACK)
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = true
+                settings.loadsImagesAutomatically = true
                 webViewClient = WebViewClient()
                 webChromeClient = WebChromeClient()
+                tag = videoId
+                loadDataWithBaseURL(
+                    "https://www.youtube.com",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null,
+                )
             }
         },
         update = { webView ->
-            val target = "https://www.youtube-nocookie.com/embed/$videoId?playsinline=1&rel=0"
-            if (webView.url != target) webView.loadUrl(target)
+            if (webView.tag != videoId) {
+                webView.tag = videoId
+                webView.loadDataWithBaseURL(
+                    "https://www.youtube.com",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null,
+                )
+            }
         },
         onRelease = { webView ->
             webView.stopLoading()
