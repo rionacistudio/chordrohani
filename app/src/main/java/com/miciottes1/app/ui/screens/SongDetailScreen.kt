@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -76,6 +78,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -252,6 +255,7 @@ fun SongDetailScreen(
                     val lines = remember(song.isi_chord) { parseSongBody(song.isi_chord) }
                     val currentKey = ChordTransposer.transposeChordToken(song.base_key, viewModel.transpose)
                     val youtubeVideoId = remember(song.youtube_url) { extractYoutubeVideoId(song.youtube_url) }
+                    var playerVisible by remember(song.judul, song.penyanyi) { mutableStateOf(false) }
                     var selectedTokenId by remember(song.isi_chord) { mutableStateOf<String?>(null) }
                     val usedChords = remember(lines, viewModel.transpose) {
                         lines.filter { it.type == LineType.CHORD }
@@ -349,13 +353,7 @@ fun SongDetailScreen(
 
                         Surface(
                             onClick = {
-                                if (youtubeVideoId != null) {
-                                    val intent = android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://www.youtube.com/watch?v=$youtubeVideoId"),
-                                    )
-                                    context.startActivity(intent)
-                                }
+                                if (youtubeVideoId != null) playerVisible = !playerVisible
                             },
                             shape = RoundedCornerShape(10.dp),
                             color = if (youtubeVideoId != null) MaterialTheme.colorScheme.primary
@@ -379,12 +377,48 @@ fun SongDetailScreen(
                                 Text(
                                     text = when {
                                         youtubeVideoId == null -> "Musik Belum Tersedia"
+                                        playerVisible -> "Tutup Pemutar"
                                         else -> "Putar Musik"
                                     },
                                     fontWeight = FontWeight.Bold,
                                     color = if (youtubeVideoId != null) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = playerVisible && youtubeVideoId != null,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            youtubeVideoId?.let { videoId ->
+                                AndroidView(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 10.dp)
+                                        .aspectRatio(16f / 9f)
+                                        .clip(RoundedCornerShape(10.dp)),
+                                    factory = { ctx ->
+                                        android.webkit.WebView(ctx).apply {
+                                            settings.javaScriptEnabled = true
+                                            settings.mediaPlaybackRequiresUserGesture = false
+                                            settings.domStorageEnabled = true
+                                            settings.userAgentString =
+                                                "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                            webViewClient = object : android.webkit.WebViewClient() {
+                                                override fun shouldOverrideUrlLoading(
+                                                    view: android.webkit.WebView?,
+                                                    request: android.webkit.WebResourceRequest?,
+                                                ): Boolean {
+                                                    return false
+                                                }
+                                            }
+                                            loadUrl("https://www.youtube.com/watch?v=$videoId&autoplay=1")
+                                        }
+                                    },
+                                    onRelease = { it.destroy() },
                                 )
                             }
                         }
