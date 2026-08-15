@@ -25,7 +25,7 @@ class SongRepository(context: Context) {
     suspend fun getDetail(judul: String, penyanyi: String): SongEntity? =
         withContext(Dispatchers.IO) { dao.getDetail(judul, penyanyi) }
 
-    suspend fun fetchDetailFromApi(judul: String, penyanyi: String): SongEntity? {
+    suspend fun fetchDetailFromApi(judul: String, penyanyi: String): Song? {
         val song = SupabaseRepository.fetchDetail(judul, penyanyi) ?: return null
         val entity = SongEntity(
             judul = song.judul,
@@ -38,7 +38,7 @@ class SongRepository(context: Context) {
             language = song.language,
         )
         withContext(Dispatchers.IO) { dao.upsertAll(listOf(entity)) }
-        return entity
+        return song
     }
 
     // ponytail: delta sync by lastmod; full fetch if DB empty or lastmod blank

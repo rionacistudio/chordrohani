@@ -55,28 +55,19 @@ class SongDetailViewModel(app: Application) : AndroidViewModel(app) {
         uiState = DetailUiState.Loading
         viewModelScope.launch {
             uiState = try {
-                // Cek Room dulu (offline), fallback ke API
+                // Chord dapat dibaca dari Room, tetapi metadata media selalu dicoba dari API.
                 val cached = repo.getDetail(judul, penyanyi)
-                val song = if (cached != null && cached.isi_chord.isNotEmpty()) {
+                val fresh = runCatching { repo.fetchDetailFromApi(judul, penyanyi) }.getOrNull()
+                val song = fresh ?: if (cached != null && cached.isi_chord.isNotEmpty()) {
                     Song(
                         judul = cached.judul,
                         penyanyi = cached.penyanyi,
                         base_key = cached.base_key,
                         isi_chord = cached.isi_chord,
                         lastmod = cached.lastmod,
+                        language = cached.language,
                     )
-                } else {
-                    val fresh = repo.fetchDetailFromApi(judul, penyanyi)
-                    if (fresh != null) {
-                        Song(
-                            judul = fresh.judul,
-                            penyanyi = fresh.penyanyi,
-                            base_key = fresh.base_key,
-                            isi_chord = fresh.isi_chord,
-                            lastmod = fresh.lastmod,
-                        )
-                    } else null
-                }
+                } else null
                 if (song != null) DetailUiState.Success(song)
                 else DetailUiState.Error("Lagu tidak ditemukan")
             } catch (e: Exception) {
