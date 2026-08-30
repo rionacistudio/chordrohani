@@ -135,22 +135,24 @@ def main():
 
     print(f"   Total {len(all_aliases)} lagu unik ditemukan", flush=True)
 
-    # Step 3: Scrape detail per lagu
-    print(f"Step 3: Scrape detail {len(all_aliases)} lagu...", flush=True)
-
-    # Ambil data existing untuk lastmod check
+    # Step 3: Hanya ambil detail lagu yang alias Psalmnote-nya belum tersimpan.
     existing = supabase_get({
-        "select": "judul,penyanyi,lastmod",
+        "select": "source_alias",
         "limit": "10000",
     })
-    db_keys = {(s["judul"], s["penyanyi"]) for s in existing}
-    print(f"   {len(db_keys)} lagu sudah ada di DB", flush=True)
+    known_aliases = {s.get("source_alias", "") for s in existing if s.get("source_alias")}
+    new_aliases = sorted(all_aliases - known_aliases)
+    print(
+        f"Step 3: {len(known_aliases)} lagu Psalmnote sudah ditandai; "
+        f"scrape {len(new_aliases)} lagu baru...",
+        flush=True,
+    )
 
     upsert_batch = []
     success = 0
     fail = 0
 
-    for i, alias in enumerate(all_aliases, 1):
+    for i, alias in enumerate(new_aliases, 1):
         if i % 50 == 0:
             print(f"   ... {i}/{len(all_aliases)} | {success} ok, {fail} fail", flush=True)
 
@@ -209,6 +211,7 @@ def main():
                 "songtype": songtype,
                 "language": language,
                 "youtube_url": youtube_url,
+                "source_alias": alias,
             })
             success += 1
 
