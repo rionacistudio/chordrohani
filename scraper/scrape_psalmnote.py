@@ -27,9 +27,16 @@ def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
 
 socket.getaddrinfo = ipv4_getaddrinfo
 
-# Session dengan retry
+# Session dengan retry untuk server Psalmnote yang kadang lambat merespons.
 session = requests.Session()
-retry = Retry(total=5, backoff_factor=2, status_forcelist=[500, 502, 503, 504])
+retry = Retry(
+    total=12,
+    connect=12,
+    read=12,
+    backoff_factor=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"],
+)
 session.mount("https://", HTTPAdapter(max_retries=retry))
 
 # ── Supabase ────────────────────────────────────────────────────────────
