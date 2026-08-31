@@ -226,7 +226,12 @@ def main():
         print("Tidak ada data baru/update.", flush=True)
         return
 
-    print(f"Upsert {len(upsert_batch)} lagu ke Supabase...", flush=True)
+    unique_batch = {}
+    for row in upsert_batch:
+        unique_batch[(row["judul"], row["penyanyi"])] = row
+    upsert_batch = list(unique_batch.values())
+
+    print(f"Upsert {len(upsert_batch)} lagu unik ke Supabase...", flush=True)
     for i in range(0, len(upsert_batch), 200):
         supabase_upsert(upsert_batch[i : i + 200])
 
