@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.miciottes1.app.R
 import com.miciottes1.app.data.SettingsRepository
 import com.miciottes1.app.data.SongRepository
 import kotlinx.coroutines.launch
@@ -319,10 +320,12 @@ fun SettingsScreen() {
 
         // ---------- Kontak ----------
         SettingCard(title = "Kontak & Sosial") {
-            listOf(
-                "Instagram" to "https://instagram.com/rionacistudio",
-                "WhatsApp" to "https://wa.me/6281234567890",
-            ).forEach { (label, url) ->
+            val socials = listOf(
+                Triple("TikTok", R.drawable.ic_tiktok, "https://tiktok.com/@rionacistudio"),
+                Triple("Instagram", R.drawable.ic_instagram, "https://instagram.com/rionacistudio"),
+                Triple("WhatsApp", R.drawable.ic_whatsapp, "https://wa.me/6281234567890"),
+            )
+            socials.forEach { (label, iconRes, url) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -334,8 +337,8 @@ fun SettingsScreen() {
                         .padding(vertical = 8.dp),
                 ) {
                     Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
+                        painter = androidx.compose.ui.res.painterResource(iconRes),
+                        contentDescription = label,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(18.dp),
                     )
