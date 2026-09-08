@@ -395,7 +395,7 @@ fun SettingsScreen() {
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Kumpulan chord lagu rohani untuk pelayanan. Data dimuat dari Supabase.",
+                        text = "Kumpulan chord lagu rohani untuk pelayanan.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
