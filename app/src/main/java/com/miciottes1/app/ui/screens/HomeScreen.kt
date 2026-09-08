@@ -518,6 +518,15 @@ private fun TopHeader(
             )
         }
 
+        Spacer(modifier = Modifier.width(12.dp))
+        androidx.compose.foundation.Image(
+            painter = painterResource(R.drawable.doxord_logo),
+            contentDescription = "Doxord",
+            modifier = Modifier
+                .width(120.dp)
+                .height(24.dp),
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         // Tombol search — rounded square, border hitam tipis
@@ -611,7 +620,7 @@ private fun HomeMenuSheet(
                         .padding(horizontal = 28.dp),
                 ) {
                     Text("◆", fontSize = 9.sp, color = decorationColor)
-                    Text("CHORDKU", fontSize = 7.sp, fontFamily = JetBrainsMono, color = decorationColor)
+                    Text("DOXORD", fontSize = 7.sp, fontFamily = JetBrainsMono, color = decorationColor)
                     Text("◆  ◆  ◆", fontSize = 9.sp, color = decorationColor)
                     Text("ROHANI", fontSize = 7.sp, fontFamily = JetBrainsMono, color = decorationColor)
                     Text("◆", fontSize = 9.sp, color = decorationColor)

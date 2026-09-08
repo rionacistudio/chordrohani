@@ -211,7 +211,7 @@ fun SettingsScreen() {
                 }
                 Column(modifier = Modifier.padding(start = 12.dp)) {
                     Text(
-                        text = "ChordKu v1.0",
+                        text = "Doxord v1.0",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,

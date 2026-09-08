@@ -40,11 +40,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
@@ -145,9 +149,7 @@ fun SongDetailScreen(
     val isFavorite = summary.favKey() in favorites
     val scope = rememberCoroutineScope()
 
-    var toolsVisible by remember { mutableStateOf(false) }
-    // Panah kiri saat tertutup, panah kanan (panel terbuka dari kanan) saat tools terbuka
-    val arrowRotation by animateFloatAsState(targetValue = if (toolsVisible) 180f else 0f, label = "arrow")
+    val shareSong = (viewModel.uiState as? DetailUiState.Success)?.song
 
     val scrollState = rememberScrollState()
 
@@ -172,60 +174,26 @@ fun SongDetailScreen(
                     .fillMaxWidth()
                     .padding(start = 12.dp, end = 12.dp, top = 8.dp),
             ) {
-                AnimatedVisibility(
-                    visible = !toolsVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onBack() },
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { onBack() },
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "Kembali",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Kembali",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-
-                AnimatedVisibility(
-                    visible = !toolsVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                ) { scope.launch { favRepo.toggle(summary.favKey()) } },
-                        ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                                contentDescription = "Favorit",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                }
 
                 Box(
                     contentAlignment = Alignment.Center,
@@ -236,15 +204,59 @@ fun SongDetailScreen(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                        ) { toolsVisible = !toolsVisible },
+                        ) { scope.launch { favRepo.toggle(summary.favKey()) } },
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Tools",
+                        imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                        contentDescription = "Favorit",
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .rotate(arrowRotation),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            enabled = shareSong != null,
+                        ) {
+                            val song = shareSong ?: return@clickable
+                            val shareText = buildString {
+                                appendLine(song.displayTitle())
+                                appendLine(song.penyanyi.ifBlank { "Tidak diketahui" })
+                                appendLine("Key: " + ChordTransposer.transposeChordToken(song.base_key, viewModel.transpose))
+                                appendLine()
+                                parseSongBody(song.isi_chord).forEach { line ->
+                                    appendLine(
+                                        if (line.type == LineType.CHORD) {
+                                            ChordTransposer.transposeLine(line.text, viewModel.transpose)
+                                        } else {
+                                            line.text
+                                        }
+                                    )
+                                }
+                            }
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                            }
+                            runCatching {
+                                context.startActivity(android.content.Intent.createChooser(send, "Bagikan chord"))
+                            }
+                        },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Bagikan chord",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -693,29 +705,15 @@ fun SongDetailScreen(
                             ChordTransposer.stepsBetween(baseRoot, targetKey),
                         )
                     },
+                    autoScroll = viewModel.autoScroll,
+                    onToggleAutoScroll = { viewModel.toggleAutoScroll() },
+                    onFontUp = { viewModel.fontUp() },
+                    onFontDown = { viewModel.fontDown() },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth(),
                 )
             }
-        }
-
-        // ---------- Floating tools panel horizontal (muncul di kiri tombol tools) ----------
-        AnimatedVisibility(
-            visible = toolsVisible,
-            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 8.dp, end = 58.dp),
-        ) {
-            ToolsPanel(
-                viewModel = viewModel,
-                onPlusWhole = { viewModel.applyTranspose(viewModel.transpose + 2) },
-                onPlusHalf = { viewModel.applyTranspose(viewModel.transpose + 1) },
-                onMinusHalf = { viewModel.applyTranspose(viewModel.transpose - 1) },
-                onMinusWhole = { viewModel.applyTranspose(viewModel.transpose - 2) },
-            )
         }
 
         // ---------- Kontrol kecepatan autoscroll (kanan bawah, di atas bar transpose) ----------
@@ -823,71 +821,244 @@ private fun TransposeKeyBar(
     baseRoot: String,
     currentKey: String,
     onSelectKey: (String) -> Unit,
+    autoScroll: Boolean,
+    onToggleAutoScroll: () -> Unit,
+    onFontUp: () -> Unit,
+    onFontDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentRoot = remember(currentKey) {
         ChordTransposer.rootNote(currentKey) ?: currentKey
     }
     val keys = ChordTransposer.DISPLAY_KEYS
-    val chipSize = 38.dp
+    val chipSize = 48.dp
     val scrollState = rememberScrollState()
+    var keyPickerVisible by remember { mutableStateOf(false) }
+    val accent = Color(0xFFF3FF83)
 
-    LaunchedEffect(currentRoot) {
-        val idx = keys.indexOf(currentRoot)
-        if (idx >= 0) {
-            scrollState.animateScrollTo((idx * 46).coerceAtLeast(0))
+    LaunchedEffect(currentRoot, keyPickerVisible) {
+        if (keyPickerVisible) {
+            val idx = keys.indexOf(currentRoot)
+            if (idx >= 0) {
+                scrollState.animateScrollTo((idx * 46).coerceAtLeast(0))
+            }
         }
     }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp),
     ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = Color(0xFF111111),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(scrollState)
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF111111),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                keys.forEach { key ->
-                    val selected = key == currentRoot
-                    Box(
-                        contentAlignment = Alignment.Center,
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .size(chipSize)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
-                            .background(
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else Color(0xFF111111),
-                            )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                            ) { onSelectKey(key) },
+                            ) {
+                                keyPickerVisible = !keyPickerVisible
+                            }
+                            .padding(horizontal = 8.dp),
                     ) {
-                        Text(
-                            text = key,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                            else Color.White.copy(alpha = 0.7f),
-                            maxLines = 1,
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = "Pilih key",
+                            tint = if (keyPickerVisible) Color.White else Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp),
                         )
+                        Text(
+                            text = "KEY $currentRoot",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (keyPickerVisible) FontWeight.Bold else FontWeight.Normal,
+                            color = if (keyPickerVisible) Color.White else Color.White.copy(alpha = 0.5f),
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { onToggleAutoScroll() }
+                            .padding(horizontal = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (autoScroll) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = "Autoscroll",
+                            tint = if (autoScroll) Color.White else Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = if (autoScroll) "PAUSE" else "PLAY",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (autoScroll) FontWeight.Bold else FontWeight.Normal,
+                            color = if (autoScroll) Color.White else Color.White.copy(alpha = 0.5f),
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("−1" to { onSelectKey(nextKey(currentRoot, keys, -2)) },
+                                   "+1" to { onSelectKey(nextKey(currentRoot, keys, +2)) })
+                                .forEach { (label, action) ->
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color.White.copy(alpha = 0.12f))
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = action,
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White.copy(alpha = 0.8f),
+                                        )
+                                    }
+                                }
+                        }
+                        Text(
+                            text = "TRANSPOSE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f),
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("A−" to onFontDown, "A+" to onFontUp)
+                                .forEach { (label, action) ->
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color.White.copy(alpha = 0.12f))
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = action,
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White.copy(alpha = 0.8f),
+                                        )
+                                    }
+                                }
+                        }
+                        Text(
+                            text = "RESIZE TEXT",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f),
+                        )
+                    }
+                }
+            }
+
+
+            AnimatedVisibility(visible = keyPickerVisible) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF111111),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(scrollState)
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        keys.forEach { key ->
+                            val selected = key == currentRoot
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(width = 42.dp, height = 32.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        color = if (selected) Color.White
+                                        else Color.White.copy(alpha = 0.12f),
+                                    )
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) {
+                                        onSelectKey(key)
+                                        keyPickerVisible = false
+                                    },
+                            ) {
+                                Text(
+                                    text = key,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selected) Color(0xFF111111)
+                                    else Color.White.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun PillControlButton(label: String, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.08f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+    ) {
+        Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun nextKey(current: String, keys: List<String>, step: Int): String {
+    val idx = keys.indexOf(current)
+    if (idx < 0) return current
+    val next = (idx + step + keys.size) % keys.size
+    return keys[next]
 }
 
 @Composable
@@ -918,50 +1089,6 @@ private fun FineButton(
             else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
             maxLines = 1,
         )
-    }
-}
-
-@Composable
-private fun ToolsPanel(
-    viewModel: SongDetailViewModel,
-    onPlusWhole: () -> Unit,
-    onPlusHalf: () -> Unit,
-    onMinusHalf: () -> Unit,
-    onMinusWhole: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        ToolSquareButton(
-            label = "A+",
-            onClick = { viewModel.fontUp() },
-        )
-        ToolSquareButton(
-            label = "A\u2212",
-            onClick = { viewModel.fontDown() },
-        )
-
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
-                .clickable { viewModel.toggleAutoScroll() },
-        ) {
-            Icon(
-                imageVector = if (viewModel.autoScroll) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = "Autoscroll",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-
-        ToolSquareButton(label = "+1", onClick = onPlusWhole)
-        ToolSquareButton(label = "+½", onClick = onPlusHalf)
-        ToolSquareButton(label = "-½", onClick = onMinusHalf)
-        ToolSquareButton(label = "-1", onClick = onMinusWhole)
     }
 }
 
