@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
-import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Info
@@ -30,7 +29,6 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -38,7 +36,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miciottes1.app.R
 import com.miciottes1.app.data.SettingsRepository
-import com.miciottes1.app.data.SongRepository
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -63,21 +59,12 @@ import kotlin.math.roundToInt
 fun SettingsScreen() {
     val context = LocalContext.current
     val settingsRepo = remember { SettingsRepository(context) }
-    val songRepo = remember { SongRepository(context) }
     val themeMode by settingsRepo.themeModeFlow.collectAsState(initial = "system")
     val fontSize by settingsRepo.fontSizeFlow.collectAsState(initial = 15f)
     val scrollSpeed by settingsRepo.scrollSpeedFlow.collectAsState(initial = 2)
     val scope = rememberCoroutineScope()
 
-    var songCount by remember { mutableStateOf<Int?>(null) }
-    var lastSync by remember { mutableStateOf<String?>(null) }
-    var syncing by remember { mutableStateOf(false) }
     var resetConfirm by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        songCount = songRepo.count()
-        lastSync = songRepo.getLastSync()
-    }
 
     Column(
         modifier = Modifier
@@ -215,63 +202,6 @@ fun SettingsScreen() {
             }
         }
 
-        // ---------- Status Data ----------
-        SettingCard(title = "Status Data") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.CloudSync,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp),
-                )
-                Column(modifier = Modifier.padding(start = 12.dp)) {
-                    Text(
-                        text = if (songCount == null) "Menghitung\u2026" else "${songCount!!.toLocaleString()} lagu tersimpan",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "Sync terakhir: ${lastSync?.take(16) ?: "belum pernah"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
-                        .clickable(enabled = !syncing) {
-                            syncing = true
-                            scope.launch {
-                                runCatching { songRepo.sync() }
-                                songCount = songRepo.count()
-                                lastSync = songRepo.getLastSync()
-                                syncing = false
-                            }
-                        }
-                        .padding(horizontal = 14.dp),
-                ) {
-                    if (syncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    } else {
-                        Text(
-                            text = "Sync Sekarang",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
-        }
-
         // ---------- Reset Default ----------
         SettingCard(title = "Reset Pengaturan") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -406,8 +336,6 @@ fun SettingsScreen() {
         Spacer(modifier = Modifier.height(110.dp))
     }
 }
-
-private fun Int.toLocaleString(): String = java.text.DecimalFormat("#,###").format(this)
 
 @Composable
 private fun SettingCard(title: String, content: @Composable () -> Unit) {
