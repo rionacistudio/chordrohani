@@ -1,5 +1,7 @@
 package com.miciottes1.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,11 +21,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -31,10 +38,13 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miciottes1.app.data.SettingsRepository
+import com.miciottes1.app.data.SongRepository
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -51,10 +62,21 @@ import kotlin.math.roundToInt
 fun SettingsScreen() {
     val context = LocalContext.current
     val settingsRepo = remember { SettingsRepository(context) }
+    val songRepo = remember { SongRepository(context) }
     val themeMode by settingsRepo.themeModeFlow.collectAsState(initial = "system")
     val fontSize by settingsRepo.fontSizeFlow.collectAsState(initial = 15f)
     val scrollSpeed by settingsRepo.scrollSpeedFlow.collectAsState(initial = 2)
     val scope = rememberCoroutineScope()
+
+    var songCount by remember { mutableStateOf<Int?>(null) }
+    var lastSync by remember { mutableStateOf<String?>(null) }
+    var syncing by remember { mutableStateOf(false) }
+    var resetConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        songCount = songRepo.count()
+        lastSync = songRepo.getLastSync()
+    }
 
     Column(
         modifier = Modifier
@@ -192,6 +214,159 @@ fun SettingsScreen() {
             }
         }
 
+        // ---------- Status Data ----------
+        SettingCard(title = "Status Data") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.CloudSync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(
+                        text = if (songCount == null) "Menghitung\u2026" else "${songCount!!.toLocaleString()} lagu tersimpan",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Sync terakhir: ${lastSync?.take(16) ?: "belum pernah"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
+                        .clickable(enabled = !syncing) {
+                            syncing = true
+                            scope.launch {
+                                runCatching { songRepo.sync() }
+                                songCount = songRepo.count()
+                                lastSync = songRepo.getLastSync()
+                                syncing = false
+                            }
+                        }
+                        .padding(horizontal = 14.dp),
+                ) {
+                    if (syncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    } else {
+                        Text(
+                            text = "Sync Sekarang",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+        }
+
+        // ---------- Reset Default ----------
+        SettingCard(title = "Reset Pengaturan") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.RestartAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = "Kembalikan tema, font, dan kecepatan ke bawaan",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp, end = 8.dp),
+                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(10.dp))
+                        .background(if (resetConfirm) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surface)
+                        .clickable {
+                            if (resetConfirm) {
+                                scope.launch {
+                                    settingsRepo.resetToDefaults()
+                                    resetConfirm = false
+                                }
+                            } else {
+                                resetConfirm = true
+                            }
+                        }
+                        .padding(horizontal = 14.dp),
+                ) {
+                    Text(
+                        text = if (resetConfirm) "Yakin?" else "Reset",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (resetConfirm) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+
+        // ---------- Kontak ----------
+        SettingCard(title = "Kontak & Sosial") {
+            listOf(
+                "Instagram" to "https://instagram.com/rionacistudio",
+                "WhatsApp" to "https://wa.me/6281234567890",
+            ).forEach { (label, url) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }
+                        .padding(vertical = 8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                }
+            }
+        }
+
+        // ---------- Privasi ----------
+        SettingCard(title = "Kebijakan Privasi") {
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    Icons.Default.PrivacyTip,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = "Doxord tidak mengumpulkan data pribadi. Data chord tersimpan di perangkat dan disinkronkan dari server publik. Favorit dan daftar pelayanan hanya tersimpan lokal di HP kamu.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+
         // ---------- Tentang ----------
         SettingCard(title = "Tentang Aplikasi") {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -228,6 +403,8 @@ fun SettingsScreen() {
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
+
+private fun Int.toLocaleString(): String = java.text.DecimalFormat("#,###").format(this)
 
 @Composable
 private fun SettingCard(title: String, content: @Composable () -> Unit) {

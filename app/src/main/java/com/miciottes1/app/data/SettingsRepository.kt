@@ -44,4 +44,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setScrollSpeed(speed: Int) {
         context.settingsStore.edit { it[speedKey] = speed }
     }
+
+    suspend fun resetToDefaults() {
+        context.settingsStore.edit { prefs ->
+            prefs.remove(themeKey)
+            prefs.remove(fontKey)
+            prefs.remove(speedKey)
+        }
+    }
 }
