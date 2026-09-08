@@ -151,6 +151,8 @@ fun SongDetailScreen(
 
     val shareSong = (viewModel.uiState as? DetailUiState.Success)?.song
 
+    var chordTapped by remember { mutableStateOf(false) }
+
     val scrollState = rememberScrollState()
 
     // Autoscroll engine
@@ -287,6 +289,9 @@ fun SongDetailScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState)
+                            .pointerInput(Unit) {
+                                detectTapGestures { chordTapped = !chordTapped }
+                            }
                             .padding(horizontal = 24.dp),
                     ) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -697,22 +702,28 @@ fun SongDetailScreen(
                 viewModel.transpose,
             )
             if (baseRoot.isNotEmpty()) {
-                TransposeKeyBar(
-                    baseRoot = baseRoot,
-                    currentKey = currentKey,
-                    onSelectKey = { targetKey ->
-                        viewModel.applyTranspose(
-                            ChordTransposer.stepsBetween(baseRoot, targetKey),
-                        )
-                    },
-                    autoScroll = viewModel.autoScroll,
-                    onToggleAutoScroll = { viewModel.toggleAutoScroll() },
-                    onFontUp = { viewModel.fontUp() },
-                    onFontDown = { viewModel.fontDown() },
+                AnimatedVisibility(
+                    visible = !chordTapped,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth(),
-                )
+                ) {
+                    TransposeKeyBar(
+                        baseRoot = baseRoot,
+                        currentKey = currentKey,
+                        onSelectKey = { targetKey ->
+                            viewModel.applyTranspose(
+                                ChordTransposer.stepsBetween(baseRoot, targetKey),
+                            )
+                        },
+                        autoScroll = viewModel.autoScroll,
+                        onToggleAutoScroll = { viewModel.toggleAutoScroll() },
+                        onFontUp = { viewModel.fontUp() },
+                        onFontDown = { viewModel.fontDown() },
+                    )
+                }
             }
         }
 
