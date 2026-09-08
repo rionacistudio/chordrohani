@@ -62,7 +62,7 @@ abstract class ChordRoomDb : RoomDatabase() {
                 val inst = Room.databaseBuilder(
                     context.applicationContext,
                     ChordRoomDb::class.java,
-                    "chordku.db",
+                    "doxord.db",
                 ).fallbackToDestructiveMigration().build()
                 INSTANCE = inst
                 inst
