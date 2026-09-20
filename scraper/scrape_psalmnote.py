@@ -4,6 +4,7 @@ Strategi: artists → albums → songinfos → song detail."""
 import os
 import socket
 import time
+from datetime import datetime, timezone
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -50,6 +51,19 @@ def supabase_get(params: dict) -> list:
     }, params=params, timeout=30)
     r.raise_for_status()
     return r.json()
+
+
+def supabase_get_all(params: dict) -> list:
+    rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        page_params = {**params, "limit": str(limit), "offset": str(offset)}
+        batch = supabase_get(page_params)
+        rows.extend(batch)
+        if len(batch) < limit:
+            return rows
+        offset += limit
 
 
 def supabase_upsert(rows: list):
@@ -143,10 +157,28 @@ def main():
     print(f"   Total {len(all_aliases)} lagu unik ditemukan", flush=True)
 
     # Step 3: Hanya ambil detail lagu yang alias Psalmnote-nya belum tersimpan.
-    existing = supabase_get({
-        "select": "source_alias",
-        "limit": "10000",
+    existing = supabase_get_all({
+        "select": "judul,penyanyi,source_alias,album_image",
     })
+
+    image_updates = []
+    old_prefix = "https://www.psalmnote.com/assets/img/albums/"
+    new_prefix = "https://www.psalmnote.com/album-image/"
+    for song in existing:
+        album_image = song.get("album_image", "") or ""
+        if album_image.startswith(old_prefix):
+            image_updates.append({
+                "judul": song["judul"],
+                "penyanyi": song["penyanyi"],
+                "album_image": album_image.replace(old_prefix, new_prefix, 1),
+                "lastmod": datetime.now(timezone.utc).isoformat(),
+            })
+
+    if image_updates:
+        print(f"Migrasi {len(image_updates)} URL gambar album lama...", flush=True)
+        for i in range(0, len(image_updates), 200):
+            supabase_upsert(image_updates[i : i + 200])
+
     known_aliases = {s.get("source_alias", "") for s in existing if s.get("source_alias")}
     new_aliases = sorted(all_aliases - known_aliases)
     print(
@@ -192,7 +224,7 @@ def main():
             album = album_obj.get("name", "")
             album_image = album_obj.get("imageUrl", "")
             if album_image:
-                album_image = f"https://www.psalmnote.com/assets/img/albums/{album_image}"
+                album_image = f"https://www.psalmnote.com/album-image/{album_image}"
             songwriter = info.get("songwriter", "") or ""
             year = str(album_obj.get("publishedYear", "") or "")
             songtype = (detail.get("songtypeObj") or {}).get("songtype", "") or ""

@@ -1,9 +1,9 @@
 name: Migrate Album Images to Supabase Storage
 
+# ponytail: dinonaktifkan — gambar diambil dari Psalmnote via backend, bukan iTunes.
+# Workflow ini hanya manual untuk keperluan darurat.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * 0'  # tiap Minggu jam 2 pagi UTC
 
 jobs:
   migrate:
