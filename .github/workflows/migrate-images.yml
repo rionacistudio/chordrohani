@@ -1,0 +1,25 @@
+name: Migrate Album Images to Supabase Storage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'  # tiap Minggu jam 2 pagi UTC
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install supabase Pillow requests
+
+      - name: Run migrate images
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python migrate_images.py
