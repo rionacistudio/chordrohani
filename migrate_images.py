@@ -1,19 +1,18 @@
 """
-Migrate album images from psalmnote.com to Supabase Storage.
-Run locally or via GitHub Actions (psalmnote blocks local IP).
+Migrate album images to Supabase Storage using iTunes Search API.
+Psalmnote blocks direct image downloads, so we use iTunes artwork instead.
+Run via GitHub Actions or locally.
 """
 
 import hashlib
 import io
 import os
-import socket
+import re
 import time
 import traceback
 from urllib.parse import urlparse
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from PIL import Image
 from supabase import create_client
 
@@ -22,27 +21,6 @@ SERVICE_ROLE_KEY = os.environ.get("SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5c
 BUCKET = "album-images"
 MAX_SIZE = (300, 300)
 MAX_BYTES = 500 * 1024
-HEADERS = {"User-Agent": "ChordRhaniBot/1.0 (auto-sync)"}
-
-# IPv4 forcing (sama seperti scraper)
-_original_getaddrinfo = socket.getaddrinfo
-
-def ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-socket.getaddrinfo = ipv4_getaddrinfo
-
-# Session dengan retry (sama seperti scraper)
-session = requests.Session()
-retry = Retry(
-    total=12,
-    connect=12,
-    read=12,
-    backoff_factor=3,
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["GET"],
-)
-session.mount("https://", HTTPAdapter(max_retries=retry))
 
 errors = []
 
@@ -63,62 +41,108 @@ def compress_image(data: bytes) -> bytes:
     return out
 
 
-def filename_from_url(url: str) -> str:
-    path = urlparse(url).path
-    name = path.rsplit("/", 1)[-1]
-    if not name or "." not in name:
-        ext = hashlib.md5(url.encode()).hexdigest()[:8]
-        name = f"{ext}.jpg"
-    base, ext = name.rsplit(".", 1)
-    return f"{base}.{ext.lower()}"
+def filename_from_album(album: str, artist: str) -> str:
+    key = f"{artist}|{album}".lower()
+    h = hashlib.md5(key.encode()).hexdigest()[:12]
+    return f"{h}.jpg"
+
+
+def search_itunes(album: str, artist: str) -> str | None:
+    """Search iTunes for album artwork. Returns 600x600 URL or None."""
+    query = f"{artist} {album}".strip()
+    if not query:
+        return None
+    try:
+        r = requests.get(
+            "https://itunes.apple.com/search",
+            params={"term": query, "entity": "album", "limit": 3},
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if data.get("resultCount", 0) == 0:
+            return None
+
+        # Cari match terbaik
+        query_lower = query.lower()
+        for result in data["results"]:
+            result_name = result.get("collectionName", "").lower()
+            result_artist = result.get("artistName", "").lower()
+            if (album.lower() in result_name or result_name in album.lower()) and \
+               (artist.lower() in result_artist or result_artist in artist.lower()):
+                url = result.get("artworkUrl100", "")
+                return url.replace("100x100", "600x600") if url else None
+
+        # Fallback: pakai result pertama
+        url = data["results"][0].get("artworkUrl100", "")
+        return url.replace("100x100", "600x600") if url else None
+    except Exception:
+        return None
 
 
 def main():
     sb = create_client(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-    print("Fetching album_image URLs from DB...", flush=True)
-    rows = sb.table("tb_chord").select("album_image").execute().data
-    urls = sorted({r["album_image"] for r in rows if r.get("album_image") and r["album_image"].strip()})
-    print(f"Found {len(urls)} unique album_image URLs", flush=True)
+    print("Fetching songs with album info from DB...", flush=True)
+    rows = sb.table("tb_chord").select("album,album_image").execute().data
 
+    # Build unique album list: {(album_name, current_image_url)}
+    albums = {}
+    for r in rows:
+        album = (r.get("album") or "").strip()
+        img = (r.get("album_image") or "").strip()
+        if album and album not in albums:
+            albums[album] = img
+
+    print(f"Found {len(albums)} unique albums", flush=True)
+
+    # Check existing files in bucket
     try:
         existing = sb.storage.from_(BUCKET).list()
         existing_names = {f["name"] for f in existing}
     except Exception:
         existing_names = set()
 
-    total = len(urls)
+    total = len(albums)
     uploaded = 0
     skipped = 0
 
-    for i, url in enumerate(urls, 1):
-        fname = filename_from_url(url)
+    for i, (album, old_image) in enumerate(albums.items(), 1):
+        fname = filename_from_album(album, "")
         new_url = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET}/{fname}"
 
+        # Skip if already uploaded
         if fname in existing_names:
-            print(f"[{i}/{total}] SKIP (exists): {fname}", flush=True)
+            print(f"[{i}/{total}] SKIP (exists): {album}", flush=True)
             skipped += 1
             try:
-                sb.table("tb_chord").update({"album_image": new_url}).eq("album_image", url).execute()
+                sb.table("tb_chord").update({"album_image": new_url}).eq("album", album).neq("album_image", new_url).execute()
             except Exception:
                 pass
             continue
 
-        # Download via requests (sama seperti scraper API)
+        # Search iTunes
+        art_url = search_itunes(album, "")
+        if not art_url:
+            print(f"[{i}/{total}] NO ART: {album}", flush=True)
+            errors.append((album, "no iTunes match"))
+            continue
+
+        # Download
         try:
-            resp = session.get(url, headers=HEADERS, timeout=30)
+            resp = requests.get(art_url, timeout=30)
             resp.raise_for_status()
         except Exception as e:
-            print(f"[{i}/{total}] FAIL download: {fname} -> {e}", flush=True)
-            errors.append((url, str(e)))
+            print(f"[{i}/{total}] FAIL download: {album} -> {e}", flush=True)
+            errors.append((album, str(e)))
             continue
 
         # Compress
         try:
             compressed = compress_image(resp.content)
         except Exception as e:
-            print(f"[{i}/{total}] FAIL compress: {fname} -> {e}", flush=True)
-            errors.append((url, str(e)))
+            print(f"[{i}/{total}] FAIL compress: {album} -> {e}", flush=True)
+            errors.append((album, str(e)))
             continue
 
         # Upload
@@ -129,27 +153,27 @@ def main():
                 file_options={"content-type": "image/jpeg", "upsert": "true"},
             )
         except Exception as e:
-            print(f"[{i}/{total}] FAIL upload: {fname} -> {e}", flush=True)
-            errors.append((url, str(e)))
+            print(f"[{i}/{total}] FAIL upload: {album} -> {e}", flush=True)
+            errors.append((album, str(e)))
             continue
 
-        # Update DB
+        # Update DB: set all rows with this album to new image
         try:
-            sb.table("tb_chord").update({"album_image": new_url}).eq("album_image", url).execute()
+            sb.table("tb_chord").update({"album_image": new_url}).eq("album", album).execute()
         except Exception as e:
-            print(f"[{i}/{total}] FAIL update DB: {fname} -> {e}", flush=True)
-            errors.append((url, str(e)))
+            print(f"[{i}/{total}] FAIL update DB: {album} -> {e}", flush=True)
+            errors.append((album, str(e)))
 
         uploaded += 1
         size_kb = len(compressed) / 1024
-        print(f"[{i}/{total}] OK: {fname} ({size_kb:.0f}KB)", flush=True)
-        time.sleep(0.3)
+        print(f"[{i}/{total}] OK: {album} ({size_kb:.0f}KB)", flush=True)
+        time.sleep(0.5)
 
     print(f"\nDone! Uploaded: {uploaded}, Skipped: {skipped}, Errors: {len(errors)}", flush=True)
     if errors:
         with open("errors.log", "w") as f:
-            for url, err in errors:
-                f.write(f"{url}\t{err}\n")
+            for name, err in errors:
+                f.write(f"{name}\t{err}\n")
         print("Errors saved to errors.log", flush=True)
 
 
