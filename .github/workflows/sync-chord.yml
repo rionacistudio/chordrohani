@@ -2,9 +2,9 @@ name: Auto-sync Chord
 
 on:
   schedule:
-    # 07:00 WIB (00:00 UTC) dan 17:00 WIB (10:00 UTC)
-    - cron: "0 0 * * *"
-    - cron: "0 10 * * *"
+    # Sabtu 07:00 WIB (00:00 UTC) dan Selasa 19:00 WIB (12:00 UTC)
+    - cron: "0 0 * * 6"
+    - cron: "0 12 * * 2"
   workflow_dispatch:
     inputs:
       scraper:
