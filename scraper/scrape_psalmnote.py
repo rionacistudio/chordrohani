@@ -15,7 +15,14 @@ SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 TABLE = "tb_chord"
 
 API_BASE = "https://www.psalmnote.com/api"
-HEADERS = {"User-Agent": "ChordRhaniBot/1.0 (auto-sync)"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.psalmnote.com/",
+    "Origin": "https://www.psalmnote.com",
+}
 
 # GitHub-hosted runner kadang memilih alamat IPv6 Psalmnote meski tidak
 # memiliki rute IPv6. Paksa koneksi scraper menggunakan alamat IPv4.
